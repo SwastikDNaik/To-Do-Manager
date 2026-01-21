@@ -1,4 +1,5 @@
 const Task = require("../models/Task");
+const User = require("../models/User");
 
 // ================= CREATE TASK =================
 const createTask = async (req, res) => {
@@ -7,6 +8,11 @@ const createTask = async (req, res) => {
 
     if (!uid || !title || !date) {
       return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const user = await User.findOne({ uid });
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized UID" });
     }
 
     const newTask = new Task({
@@ -23,11 +29,6 @@ const createTask = async (req, res) => {
 };
 
 // ================= GET TASKS =================
-// Supports:
-// - All tasks
-// - Completed tasks
-// - Favorite tasks
-// - Date-based filtering
 const getTasks = async (req, res) => {
   try {
     const { uid, date, status, favorite } = req.query;
@@ -36,23 +37,16 @@ const getTasks = async (req, res) => {
       return res.status(400).json({ message: "UID is required" });
     }
 
-    // Base filter (always)
+    const user = await User.findOne({ uid });
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized UID" });
+    }
+
     let query = { uid };
 
-    // Calendar date filter
-    if (date) {
-      query.date = date;
-    }
-
-    // Completed tasks filter
-    if (status) {
-      query.status = status; // "done"
-    }
-
-    // Favorite tasks filter
-    if (favorite === "true") {
-      query.isFavorite = true;
-    }
+    if (date) query.date = date;
+    if (status) query.status = status;
+    if (favorite === "true") query.isFavorite = true;
 
     const tasks = await Task.find(query).sort({ date: 1 });
     res.json(tasks);
@@ -62,18 +56,13 @@ const getTasks = async (req, res) => {
 };
 
 // ================= UPDATE TASK =================
-// Used for:
-// - status update (done / todo)
-// - favorite toggle (isFavorite)
 const updateTask = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const updatedTask = await Task.findByIdAndUpdate(
-      id,
-      req.body,
-      { new: true }
-    );
+    const updatedTask = await Task.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
 
     if (!updatedTask) {
       return res.status(404).json({ message: "Task not found" });

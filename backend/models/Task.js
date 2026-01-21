@@ -14,6 +14,10 @@ const taskSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+    isFavorite: {
+  type: Boolean,
+  default: false
+   },
     status: {
       type: String,
       default: "todo",
